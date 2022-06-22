@@ -1,5 +1,4 @@
 from time import sleep
-
 import gym
 from gym import spaces
 import pygame
@@ -22,8 +21,12 @@ class GridWorldEnv(gym.Env):
             }
         )
 
+        self.nb_states = size*size # The number of states of the environment
+
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
-        self.action_space = spaces.Discrete(4)
+        self.nb_actions = 4
+        self.action_space = spaces.Discrete(self.nb_actions)
+
 
         """
         The following dictionary maps abstract actions from `self.action_space` to 
@@ -84,10 +87,10 @@ class GridWorldEnv(gym.Env):
         done = np.array_equal(self._agent_location, self._target_location)
         # if (self._agent_location + direction)[0]>self.size-1 or (self._agent_location + direction)[1]>self.size-1 or (self._agent_location + direction)[0]<0 or (self._agent_location + direction)[1]<0:
         #     reward = -5
-        if done :
+        if done:
             reward = 10
         else:
-            reward = -1
+            reward = 0
 
         observation = self._get_obs()
         info = self._get_info()
