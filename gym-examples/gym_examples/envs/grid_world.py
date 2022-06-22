@@ -8,7 +8,7 @@ import numpy as np
 class GridWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, size=5):
+    def __init__(self, size=10):
         self.size = size  # The size of the square grid
         self.window_size = 512  # The size of the PyGame window
 
@@ -22,6 +22,8 @@ class GridWorldEnv(gym.Env):
         )
 
         self.nb_states = size*size # The number of states of the environment
+
+        self.state_table = [[i, j] for i in range(self.size) for j in range(self.size)]
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         self.nb_actions = 4
@@ -60,17 +62,22 @@ class GridWorldEnv(gym.Env):
             )
         }
 
-    def reset(self, seed=None, return_info=False, options=None):
+    def reset(self, first_reset=False, return_info=False, options=None):
         # We need the following line to seed self.np_random
-        super().reset(seed=seed)
+        super().reset()
 
         # Choose the agent's location uniformly at random
         self._agent_location = self.np_random.integers(0, self.size, size=2)
 
-        # We will sample the target's location randomly until it does not coincide with the agent's location
-        self._target_location = self._agent_location
-        while np.array_equal(self._target_location, self._agent_location):
-            self._target_location = self.np_random.integers(0, self.size, size=2)
+        # # We will sample the target's location randomly until it does not coincide with the agent's location
+        # self._target_location = self._agent_location
+        # while np.array_equal(self._target_location, self._agent_location):
+        #     self._target_location = self.np_random.integers(0, self.size, size=2)
+
+        if first_reset:
+            self._target_location = self._agent_location
+            while np.array_equal(self._target_location, self._agent_location):
+                self._target_location = self.np_random.integers(0, self.size, size=2)
 
         observation = self._get_obs()
         info = self._get_info()
