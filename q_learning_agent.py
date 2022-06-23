@@ -1,19 +1,17 @@
-import gym
-import gym_examples
-from gym import spaces
 import numpy as np
 import random
 
 
 class QLearningAgent:
 
-    def __init__(self, env):
+    def __init__(self, env, learning_rate=0.9, discount_rate=0.5, epsilon=1.0, decay_rate=0.005):
         # hyper parameters
+        self.learning_rate = learning_rate  # alpha
+        self.discount_rate = discount_rate  # gamma
+        self.epsilon = epsilon
+        self.decay_rate = decay_rate
+
         self.state = None
-        self.learning_rate = 0.9  # alpha
-        self.discount_rate = 0.5  # gamma
-        self.epsilon = 1.0
-        self.decay_rate = 0.005
 
         self.action_space = env.action_space
 
@@ -36,13 +34,11 @@ class QLearningAgent:
                 self.qtable[self.state, action] = self.qtable[self.state, action] + self.learning_rate * (
                         reward + self.discount_rate * np.max(self.qtable[new_state, :]) - self.qtable[self.state, action])
 
-                env.render()
                 self.state = new_state
 
                 # if done, finish episode
-                if done == True:
-                    # On reset l'environnement
-                    observation = env.reset()
+                if done:
+                    env.reset()
                     break
 
             # Decrease epsilon

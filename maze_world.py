@@ -5,7 +5,7 @@ import pygame
 import numpy as np
 
 
-class GridWorldEnv(gym.Env):
+class MazeWorld(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
     def __init__(self, size=10):
@@ -21,14 +21,26 @@ class GridWorldEnv(gym.Env):
             }
         )
 
-        self.nb_states = size*size # The number of states of the environment
+        self.nb_boxes = size*size # The number of states of the environment
+
+        self.nb_wall = self.np_random.integers(1, self.nb_boxes, size=1)[0]
+        self.nb_states = self.nb_boxes - self.nb_wall
 
         self.state_table = [[i, j] for i in range(self.size) for j in range(self.size)]
+        self.wall_table = []
+
+        for i in range(self.nb_wall):
+            j = self.np_random.integers(1, len(self.state_table), size=1)[0]
+            #(self.state_table[j])
+            self.wall_table.append(self.state_table[j])
+            self.state_table.remove(self.state_table[j])
+
+        print(self.state_table)
+        print(self.wall_table)
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         self.nb_actions = 4
         self.action_space = spaces.Discrete(self.nb_actions)
-
 
         """
         The following dictionary maps abstract actions from `self.action_space` to 
@@ -67,31 +79,39 @@ class GridWorldEnv(gym.Env):
         super().reset()
 
         # Choose the agent's location uniformly at random
-        self._agent_location = self.np_random.integers(0, self.size, size=2)
+        self._agent_location = self.np_random.integers(0, self.nb_states, size=2)
 
-        # # We will sample the target's location randomly until it does not coincide with the agent's location
-        # self._target_location = self._agent_location
-        # while np.array_equal(self._target_location, self._agent_location):
-        #     self._target_location = self.np_random.integers(0, self.size, size=2)
+        while not self.is_state(self._agent_location):
+            self._agent_location = self.np_random.integers(0, self.nb_states, size=2)
 
         if first_reset:
             self._target_location = self._agent_location
-            while np.array_equal(self._target_location, self._agent_location):
+            while np.array_equal(self._target_location, self._agent_location) or not self.is_state(self._target_location):
                 self._target_location = self.np_random.integers(0, self.size, size=2)
 
         observation = self._get_obs()
         info = self._get_info()
         return (observation, info) if return_info else observation
 
+    def is_state(self, state):
+        for i in range(self.nb_states):
+            if np.array_equal(state, self.state_table[i]):
+                return True
+        return False
+
     def step(self, action):
         # Map the action (element of {0,1,2,3}) to the direction we walk in
         direction = self._action_to_direction[action]
-        # We use `np.clip` to make sure we don't leave the grid
-        self._agent_location = np.clip(
-            self._agent_location + direction, 0, self.size - 1
-        )
-        # An episode is done iff the agent has reached the target
+
+        if self.is_state(self._agent_location + direction):
+            # We use `np.clip` to make sure we don't leave the grid
+            self._agent_location = np.clip(
+                self._agent_location + direction, 0, self.size - 1
+            )
+
+        # An episode is done if the agent has reached the target
         done = np.array_equal(self._agent_location, self._target_location)
+
         if done:
             reward = 10
         else:
@@ -103,7 +123,6 @@ class GridWorldEnv(gym.Env):
         return observation, reward, done, info
 
     def render(self, mode="human"):
-        sleep(0.5)
         if self.window is None and mode == "human":
             pygame.init()
             pygame.display.init()
@@ -118,6 +137,7 @@ class GridWorldEnv(gym.Env):
         )  # The size of a single grid square in pixels
 
         # First we draw the target
+        print(self._target_location)
         pygame.draw.rect(
             canvas,
             (255, 0, 0),
@@ -126,6 +146,16 @@ class GridWorldEnv(gym.Env):
                 (pix_square_size, pix_square_size),
             ),
         )
+        for i in range(self.nb_wall):
+            print(np.array(self.wall_table[i]))
+            pygame.draw.rect(
+                canvas,
+                (96, 96, 96),
+                pygame.Rect(
+                    pix_square_size * np.array(self.wall_table[i]),
+                    (pix_square_size, pix_square_size),
+                ),
+            )
         # Now we draw the agent
         pygame.draw.circle(
             canvas,
@@ -150,6 +180,7 @@ class GridWorldEnv(gym.Env):
                 (pix_square_size * x, self.window_size),
                 width=3,
             )
+
 
         if mode == "human":
             # The following line copies our drawings from `canvas` to the visible window
